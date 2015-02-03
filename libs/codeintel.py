@@ -699,7 +699,9 @@ class CodeIntelManager(threading.Thread):
 
     def notifyObservers(self, topic, data):
         """Observer calls must be called on the main thread"""
-        print(topic)
+        if topic == '':
+            msg = data.get('message')
+            print(topic, msg)
 
     def do_scan_complete(self, response):
         """Scan complete unsolicited response"""
@@ -714,8 +716,6 @@ class CodeIntelManager(threading.Thread):
 
     def do_report_error(self, response):
         """Report a codeintel error into the error log"""
-        msg = response.get('message')
-        print(msg)
         self.notifyObservers('status_message', response)
 
     def do_quit(self, request, response):
@@ -802,12 +802,12 @@ class CodeIntelBuffer(object):
             self.log.exception("Error calling %s callback", context)
             pass
 
-    def trg_from_pos(self, handler, implicit):
+    def trg_from_pos(self, handler, implicit, pos=None):
         self.service.send(
             command='trg-from-pos',
             path=self.path,
             language=self.lang,
-            pos=self.pos,
+            pos=self.pos if pos is None else pos,
             env=self.env,
             implicit=implicit,
             text=self.text,
@@ -815,12 +815,12 @@ class CodeIntelBuffer(object):
             callback=functools.partial(self._post_trg_from_pos_handler, handler, 'trg_from_pos')
         )
 
-    def preceding_trg_from_pos(self, handler, curr_pos):
+    def preceding_trg_from_pos(self, handler, curr_pos, pos=None):
         self.service.send(
             command='trg-from-pos',
             path=self.path,
             language=self.lang,
-            pos=self.pos,
+            pos=self.pos if pos is None else pos,
             env=self.env,
             text=self.text,
             encoding='utf-8',
@@ -828,13 +828,13 @@ class CodeIntelBuffer(object):
             **{'curr-pos': curr_pos}
         )
 
-    def defn_trg_from_pos(self, handler, trg_pos):
+    def defn_trg_from_pos(self, handler, pos=None):
         self.service.send(
             command='trg-from-pos',
             type='defn',
             path=self.path,
             language=self.lang,
-            pos=trg_pos,
+            pos=self.pos if pos is None else pos,
             env=self.env,
             text=self.text,
             encoding='utf-8',
