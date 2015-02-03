@@ -759,14 +759,17 @@ class CodeIntelBuffer(object):
     """A buffer-like object for codeintel; this is specific to a
     CodeIntelManager instance."""
 
-    def __init__(self, service, vid, lang=None, path=None, text=None, env=None):
+    def __init__(self, service, vid, lang=None, path=None, text=None):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.service = service
         self.vid = vid
         self.lang = lang
         self.path = path
-        self.env = {} if env is None else env
         self.text = text
+
+    @property
+    def env(self):
+        return self.service.mgr.env
 
     @property
     def cpln_fillup_chars(self):
