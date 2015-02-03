@@ -261,8 +261,30 @@ class CodeIntelManager(threading.Thread):
     languages = {}
     available_catalogs = []  # see get-available-catalogs command
     env = {
-        'env': {},
-        'prefs': [],
+        'env': dict(os.environ),
+        'prefs': [
+            {
+                'codeintel_max_recursive_dir_depth': 10,
+                'codeintel_scan_files_in_project': True,
+                'codeintel_selected_catalogs': [],
+                'defaultHTML5Decl': '-//W3C//DTD HTML 5//EN',
+                'defaultHTMLDecl': '-//W3C//DTD HTML 5//EN',
+                'javascriptExtraPaths': '',
+                'nodejsDefaultInterpreter': '',
+                'nodejsExtraPaths': '',
+                'perl': '',
+                'perlExtraPaths': '',
+                'php': '',
+                'phpConfigFile': '',
+                'phpExtraPaths': '',
+                'python': '',
+                'python3': '',
+                'python3ExtraPaths': '',
+                'pythonExtraPaths': '',
+                'ruby': '',
+                'rubyExtraPaths': '',
+            },
+        ],
     }
 
     def __init__(self, service, init_callback=None, shutdown_callback=None):
