@@ -183,13 +183,12 @@ class CodeIntelHandler(object):
         vid = view.id()
         try:
             buf = ci.buffers[vid]
-            buf.vid = vid
-            buf.trg = {}
-            buf.cplns = None
         except KeyError:
             logger.debug("creating new %s document %s", lang, path)
             buf = CodeIntelBuffer(ci, vid=vid)
             ci.buffers[vid] = buf
+            buf.cplns = None
+            buf.trg = {}
 
         sel = view_sel[0]
         pos = sel.end()
@@ -366,7 +365,7 @@ class SublimeCodeIntelHandler(CodeIntelHandler, sublime_plugin.EventListener):
 
     def on_query_completions(self, view, prefix, locations):
         buf = self.buf_from_view(view)
-        if buf and buf.cplns:
+        if buf and getattr(buf, 'cplns'):
             completions = self.format_completions_by_language(buf.cplns, buf.lang, buf.text_in_current_line, buf.trg.get('type'))
             buf.cplns = None
             return completions
