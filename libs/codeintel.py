@@ -12,11 +12,8 @@
 # License for the specific language governing rights and limitations
 # under the License.
 #
-# The Original Code is SublimeCodeIntel code.
-#
-# The Initial Developer of the Original Code is German M. Bravo (Kronuz).
-# Portions created by German M. Bravo (Kronuz) are Copyright (C) 2011
-# German M. Bravo (Kronuz). All Rights Reserved.
+# The Original Code is ActiveState Software Inc code.
+# Portions created by German M. Bravo (Kronuz) are Copyright (C) 2015.
 #
 # Contributor(s):
 #   German M. Bravo (Kronuz)
@@ -25,12 +22,6 @@
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
 # ActiveState Software Inc. All Rights Reserved.
 #
-"""
-CodeIntel is a plugin intended to display "code intelligence" information.
-The plugin is based in code from the Open Komodo Editor and has a MPL license.
-Port by German M. Bravo (Kronuz). 2011-2015
-
-"""
 from __future__ import absolute_import, unicode_literals, print_function
 
 import os

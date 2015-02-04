@@ -12,14 +12,9 @@
 # License for the specific language governing rights and limitations
 # under the License.
 #
-# The Original Code is SublimeCodeIntel code.
-#
-# The Initial Developer of the Original Code is German M. Bravo (Kronuz).
-# Portions created by German M. Bravo (Kronuz) are Copyright (C) 2011
-# German M. Bravo (Kronuz). All Rights Reserved.
+# The Original Code is SublimeCodeIntel code by German M. Bravo (Kronuz).
 #
 # Contributor(s):
-#   German M. Bravo (Kronuz)
 #   ActiveState Software Inc
 #
 # Portions created by ActiveState Software Inc are Copyright (C) 2000-2007
