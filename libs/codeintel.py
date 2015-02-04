@@ -70,19 +70,6 @@ PRIORITY_BACKGROUND = 4     # info may be needed sometime
 logger_name = 'codeintel'
 logger = logging.getLogger(logger_name)
 
-handler = logging.StreamHandler(sys.stderr)
-handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-logger.handlers = [handler]
-logger.setLevel(logging.WARNING)  # INFO
-
-
-class DummyStream(object):
-    def write(self, message):
-        pass
-
-    def flush(self):
-        pass
-
 
 class CodeIntel(object):
     def __init__(self):
@@ -941,6 +928,14 @@ class CodeIntelBuffer(object):
             env=self.env,
             callback=callback,
         )
+
+
+class DummyStream(object):
+    def write(self, message):
+        pass
+
+    def flush(self):
+        pass
 
 
 def oop_driver(db_base_dir, connect=None, log_levels=[], log_file=None):
