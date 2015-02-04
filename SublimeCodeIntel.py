@@ -69,7 +69,7 @@ logger = logging.getLogger(logger_name)
 handler = logging.StreamHandler(sys.stderr)
 handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 logger.handlers = [handler]
-logger.setLevel(logging.DEBUG)  # INFO
+logger.setLevel(logging.INFO)  # INFO
 
 
 class CodeIntelHandler(object):
