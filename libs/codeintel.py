@@ -59,12 +59,12 @@ PRIORITY_CURRENT = 2        # UI requires info on this file soon
 PRIORITY_OPEN = 3           # UI will likely require info on this file soon
 PRIORITY_BACKGROUND = 4     # info may be needed sometime
 
-logger = logging.getLogger(__name__)
+logger_name = 'SublimeCodeIntel.codeintel'
 
 
 class CodeIntel(object):
     def __init__(self):
-        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.mgr = None
         self._mgr_lock = threading.Lock()
         self.buffers = {}
@@ -277,7 +277,7 @@ class CodeIntelManager(threading.Thread):
     }
 
     def __init__(self, service, init_callback=None, shutdown_callback=None):
-        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.service = service
         self._abort = set()
         self._next_id = 0
@@ -744,7 +744,7 @@ class CodeIntelBuffer(object):
     CodeIntelManager instance."""
 
     def __init__(self, service, vid, lang=None, path=None, text=None):
-        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.service = service
         self.vid = vid
         self.lang = lang
@@ -949,6 +949,7 @@ def oop_driver(db_base_dir, connect=None, log_levels=[], log_file=None):
     else:
         logging.basicConfig(stream=DummyStream())
 
+    logger = logging.getLogger('codeintel')
     logger.setLevel(logging.INFO)
 
     for log_level in log_levels:

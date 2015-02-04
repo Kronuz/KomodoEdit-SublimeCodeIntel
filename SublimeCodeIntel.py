@@ -63,12 +63,13 @@ import sublime_plugin
 
 from codeintel import CodeIntel, CodeIntelBuffer
 
-logger = logging.getLogger(__name__)
+logger_name = 'SublimeCodeIntel'
+logger = logging.getLogger(logger_name)
+logger.setLevel(logging.INFO)  # INFO
 
 handler = logging.StreamHandler(sys.stderr)
 handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 logger.handlers = [handler]
-logger.setLevel(logging.INFO)  # INFO
 
 
 class CodeIntelHandler(object):
@@ -80,7 +81,7 @@ class CodeIntelHandler(object):
     status_lock = threading.Lock()
 
     def __init__(self, *args, **kwargs):
-        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         super(CodeIntelHandler, self).__init__(*args, **kwargs)
         ci.add_observer(self)
 
@@ -247,160 +248,170 @@ class CodeIntelHandler(object):
             buf.async_eval_at_trg(self, trg)
 
     def set_status_message(self, buf, message, highlight=None):
-        self.set_status(message)
+        def _set_status_message():
+            self.set_status(message)
+        sublime.set_timeout(_set_status_message, 0)
 
     def set_call_tip_info(self, buf, calltip, explicit, trg):
-        view = self.view
-        if not view:
-            return
-        vid = view.id()
-        if vid != buf.vid:
-            return
+        def _set_call_tip_info():
+            view = self.view
+            if not view:
+                return
+            vid = view.id()
+            if vid != buf.vid:
+                return
 
-        snippets = []
-        # TODO: This snippets are created and work for Python language def functions.
-        # i.e. in the form: name(arg1, arg2, arg3)
-        # Other languages might need different treatment.
+            snippets = []
+            # TODO: This snippets are created and work for Python language def functions.
+            # i.e. in the form: name(arg1, arg2, arg3)
+            # Other languages might need different treatment.
 
-        # Figure out how many arguments are there already:
-        text_in_current_line = buf.text_in_current_line[:-1]  # Remove next char after cursor
-        arguments = text_in_current_line.rpartition('(')[2].replace(' ', '').strip() or 0
-        if arguments:
-            initial_separator = ''
-            if arguments[-1] == ',':
-                arguments = arguments[:-1]
-            else:
-                initial_separator += ','
-            if not text_in_current_line.endswith(' '):
-                initial_separator += ' '
-            arguments = arguments.count(',') + 1 if arguments else 0
+            # Figure out how many arguments are there already:
+            text_in_current_line = buf.text_in_current_line[:-1]  # Remove next char after cursor
+            arguments = text_in_current_line.rpartition('(')[2].replace(' ', '').strip() or 0
+            if arguments:
+                initial_separator = ''
+                if arguments[-1] == ',':
+                    arguments = arguments[:-1]
+                else:
+                    initial_separator += ','
+                if not text_in_current_line.endswith(' '):
+                    initial_separator += ' '
+                arguments = arguments.count(',') + 1 if arguments else 0
 
-        # Insert parameters as snippet:
-        snippet = None
-        tip_info = calltip.split('\n')
-        m = re.search(r'([^\s]+)\(([^\[\(\)]*)', tip_info[0])
-        if m:
-            params = [p.strip() for p in m.group(2).split(',')]
-            if params:
-                n = 1
-                snippet = []
-                for i, p in enumerate(params):
-                    if p and i >= arguments:
-                        var, _, _ = p.partition('=')
-                        var = var.strip()
-                        if ' ' in var:
-                            var = var.split(' ')[1]
-                        if var[0] == '$':
-                            var = var[1:]
-                        snippet.append('${%s:%s}' % (n, var))
-                        n += 1
-                snippet = ', '.join(snippet)
-                if arguments and snippet:
-                    snippet = initial_separator + snippet
+            # Insert parameters as snippet:
+            snippet = None
+            tip_info = calltip.split('\n')
+            m = re.search(r'([^\s]+)\(([^\[\(\)]*)', tip_info[0])
+            if m:
+                params = [p.strip() for p in m.group(2).split(',')]
+                if params:
+                    n = 1
+                    snippet = []
+                    for i, p in enumerate(params):
+                        if p and i >= arguments:
+                            var, _, _ = p.partition('=')
+                            var = var.strip()
+                            if ' ' in var:
+                                var = var.split(' ')[1]
+                            if var[0] == '$':
+                                var = var[1:]
+                            snippet.append('${%s:%s}' % (n, var))
+                            n += 1
+                    snippet = ', '.join(snippet)
+                    if arguments and snippet:
+                        snippet = initial_separator + snippet
 
-        # Wrap lines that are too long:
-        padding = '   '
-        min_line_length = 80
-        max_line_length = 100
-        measured_tips = []
-        for i, tip in enumerate(tip_info):
-            if i == 0:
-                measured_tips.append(tip + ' ' * max(0, min_line_length - len(tip)))
-            elif len(tip) > max_line_length:
-                chunks = len(tip)
-                for j in range(0, chunks, max_line_length):
-                    measured_tips.append(tip[j:j + max_line_length])
-            else:
-                measured_tips.append(tip)
+            # Wrap lines that are too long:
+            padding = '   '
+            min_line_length = 80
+            max_line_length = 100
+            measured_tips = []
+            for i, tip in enumerate(tip_info):
+                if i == 0:
+                    measured_tips.append(tip + ' ' * max(0, min_line_length - len(tip)))
+                elif len(tip) > max_line_length:
+                    chunks = len(tip)
+                    for j in range(0, chunks, max_line_length):
+                        measured_tips.append(tip[j:j + max_line_length])
+                else:
+                    measured_tips.append(tip)
 
-        # Insert tooltip snippet
-        snippets.extend(((padding if i > 0 else '') + l + (padding if i > 0 else ''), snippet or '${0}') for i, l in enumerate(measured_tips))
+            # Insert tooltip snippet
+            snippets.extend(((padding if i > 0 else '') + l + (padding if i > 0 else ''), snippet or '${0}') for i, l in enumerate(measured_tips))
 
-        buf.cplns = snippets or None
-        if buf.cplns:
-            view.run_command('auto_complete', {
-                'disable_auto_insert': True,
-                'api_completions_only': True,
-                'next_completion_if_showing': False,
-                'auto_complete_commit_on_tab': True,
-            })
+            buf.cplns = snippets or None
+            if buf.cplns:
+                view.run_command('auto_complete', {
+                    'disable_auto_insert': True,
+                    'api_completions_only': True,
+                    'next_completion_if_showing': False,
+                    'auto_complete_commit_on_tab': True,
+                })
+        sublime.set_timeout(_set_call_tip_info, 0)
 
     def set_auto_complete_info(self, buf, cplns, trg):
-        view = self.view
-        if not view:
-            return
-        vid = view.id()
-        if vid != buf.vid:
-            return
+        def _set_auto_complete_info():
+            view = self.view
+            if not view:
+                return
+            vid = view.id()
+            if vid != buf.vid:
+                return
 
-        cplns = self.format_completions_by_language(cplns, buf.lang, buf.text_in_current_line, trg.get('type'))
+            _cplns = self.format_completions_by_language(cplns, buf.lang, buf.text_in_current_line, trg.get('type'))
 
-        buf.cplns = cplns or None
-        if buf.cplns:
-            view.run_command('auto_complete', {
-                'disable_auto_insert': True,
-                'api_completions_only': True,
-                'next_completion_if_showing': False,
-                'auto_complete_commit_on_tab': True,
-            })
+            buf.cplns = _cplns or None
+            if buf.cplns:
+                view.run_command('auto_complete', {
+                    'disable_auto_insert': True,
+                    'api_completions_only': True,
+                    'next_completion_if_showing': False,
+                    'auto_complete_commit_on_tab': True,
+                })
+        sublime.set_timeout(_set_auto_complete_info, 0)
 
     def set_definitions_info(self, buf, defns, trg):
-        view = self.view
+        def _set_definitions_info():
+            view = self.view
 
-        view_sel = view.sel()
-        if not view_sel:
-            return
+            view_sel = view.sel()
+            if not view_sel:
+                return
 
-        file_name = view.file_name()
-        path = file_name if file_name else "<Unsaved>"
+            file_name = view.file_name()
+            path = file_name if file_name else "<Unsaved>"
 
-        defn = defns[0]
-        row, col = defn['line'], 1
-        path = defn['path']
-        if not path:
-            msg = "Cannot jump to definition!"
+            defn = defns[0]
+            row, col = defn['line'], 1
+            path = defn['path']
+            if not path:
+                msg = "Cannot jump to definition!"
+                logger.debug(msg)
+                return
+
+            jump_location = "%s:%s:%s" % (path, row, col)
+            msg = "Jumping to: %s" % jump_location
             logger.debug(msg)
-            return
 
-        jump_location = "%s:%s:%s" % (path, row, col)
-        msg = "Jumping to: %s" % jump_location
-        logger.debug(msg)
+            window = sublime.active_window()
+            wid = window.id()
+            if wid not in CodeIntelHandler.jump_history_by_window:
+                CodeIntelHandler.jump_history_by_window[wid] = collections.deque([], CodeIntelHandler.HISTORY_SIZE)
+            jump_history = CodeIntelHandler.jump_history_by_window[wid]
 
-        window = sublime.active_window()
-        wid = window.id()
-        if wid not in CodeIntelHandler.jump_history_by_window:
-            CodeIntelHandler.jump_history_by_window[wid] = collections.deque([], CodeIntelHandler.HISTORY_SIZE)
-        jump_history = CodeIntelHandler.jump_history_by_window[wid]
+            # Save current position so we can return to it
+            row, col = view.rowcol(view_sel[0].begin())
+            current_location = "%s:%d:%d" % (file_name, row + 1, col + 1)
+            jump_history.append(current_location)
 
-        # Save current position so we can return to it
-        row, col = view.rowcol(view_sel[0].begin())
-        current_location = "%s:%d:%d" % (file_name, row + 1, col + 1)
-        jump_history.append(current_location)
-
-        window.open_file(jump_location, sublime.ENCODED_POSITION)
-        window.open_file(jump_location, sublime.ENCODED_POSITION)
+            window.open_file(jump_location, sublime.ENCODED_POSITION)
+            window.open_file(jump_location, sublime.ENCODED_POSITION)
+        sublime.set_timeout(_set_definitions_info, 0)
 
 
 class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
     def observer(self, topic, data):
-        if topic == 'progress':
-            message = data.get('message')
-            progress = data.get('progress')
-            if message:
-                message = "%s - %s%% / %s%%" % (message, progress, 100)
-            else:
-                message = "%s%% / %s%%" % (progress, 100)
-            self.set_status('info', message, lid='SublimeCodeIntel Notification')
-        elif topic == 'status_message':
-            message = data.get('message')
-            if message:
+        def _observer():
+            if topic == 'progress':
+                message = data.get('message')
+                progress = data.get('progress')
+                if message:
+                    message = "%s - %s%% / %s%%" % (message, progress, 100)
+                else:
+                    message = "%s%% / %s%%" % (progress, 100)
                 self.set_status('info', message, lid='SublimeCodeIntel Notification')
-        elif topic == 'error_message':
-            message = data.get('message')
-            if message:
-                self.set_status('error', message, lid='SublimeCodeIntel Notification')
-        elif 'codeintel_buffer_scanned':
-            pass
+            elif topic == 'status_message':
+                message = data.get('message')
+                if message:
+                    self.set_status('info', message, lid='SublimeCodeIntel Notification')
+            elif topic == 'error_message':
+                message = data.get('message')
+                if message:
+                    self.set_status('error', message, lid='SublimeCodeIntel Notification')
+            elif 'codeintel_buffer_scanned':
+                pass
+        sublime.set_timeout(_observer, 0)
 
     def on_pre_save(self, view):
         if view.is_dirty():
