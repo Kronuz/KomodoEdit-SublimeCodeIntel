@@ -59,28 +59,27 @@ PRIORITY_CURRENT = 2        # UI requires info on this file soon
 PRIORITY_OPEN = 3           # UI will likely require info on this file soon
 PRIORITY_BACKGROUND = 4     # info may be needed sometime
 
-logger_name = 'codeintel'
-logger = logging.getLogger(logger_name)
+logger = logging.getLogger(__name__)
 
 
 class CodeIntel(object):
     def __init__(self):
-        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         self.mgr = None
         self._mgr_lock = threading.Lock()
         self.buffers = {}
         self._queue = six.moves.queue.Queue()
         self._quit_application = False  # app is shutting down, don't try to respawn
-        self._observers = weakref.WeakSet()
+        self._observers = weakref.WeakKeyDictionary()
 
     def add_observer(self, obj):
         if hasattr(obj, 'observer'):
-            self._observers.add(obj)
+            self._observers[obj] = True
 
     def notify_observers(self, topic, data):
         """Observer calls must be called on the main thread"""
         if topic:
-            for obj in self._observers:
+            for obj in self._observers.keys():
                 obj.observer(topic, data)
 
     def _on_mgr_init(self, mgr, message, progress=None):
