@@ -278,7 +278,7 @@ class CodeIntelManager(threading.Thread):
     }
 
     def __init__(self, service, init_callback=None, shutdown_callback=None):
-        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         self.service = service
         self._abort = set()
         self._next_id = 0
@@ -745,7 +745,7 @@ class CodeIntelBuffer(object):
     CodeIntelManager instance."""
 
     def __init__(self, service, vid, lang=None, path=None, text=None):
-        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         self.service = service
         self.vid = vid
         self.lang = lang

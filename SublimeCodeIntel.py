@@ -63,8 +63,7 @@ import sublime_plugin
 
 from codeintel import CodeIntel, CodeIntelBuffer
 
-logger_name = 'sublimecodeintel'
-logger = logging.getLogger(logger_name)
+logger = logging.getLogger(__name__)
 
 handler = logging.StreamHandler(sys.stderr)
 handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
@@ -81,7 +80,7 @@ class CodeIntelHandler(object):
     status_lock = threading.Lock()
 
     def __init__(self, *args, **kwargs):
-        self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
+        self.log = logging.getLogger(__name__ + '.' + self.__class__.__name__)
         super(CodeIntelHandler, self).__init__(*args, **kwargs)
         ci.add_observer(self)
 
