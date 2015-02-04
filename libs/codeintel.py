@@ -868,6 +868,7 @@ class CodeIntelBuffer(object):
                     self.log.exception("Error reporting async_eval_at_trg error: %s", response.get("message", "<error not available>"))
                     pass
                 return
+
             if 'retrigger' in response:
                 trg['retriggerOnCompletion'] = response['retrigger']
 
@@ -881,8 +882,8 @@ class CodeIntelBuffer(object):
                     pass
             elif 'calltip' in response:
                 try:
-                    handler.set_call_tip_info(self, response['calltip'], trg, request.get('explicit', False))
-                except:
+                    handler.set_call_tip_info(self, response['calltip'], request.get('explicit', False), trg)
+                except Exception as e:
                     self.log.exception("Error calling set_call_tip_info")
                     pass
             elif 'defns' in response:
