@@ -365,7 +365,8 @@ class CodeIntelManager(threading.Thread):
 
             if True:
                 python_exec = self.env['env'].get('PYTHON', 'python')
-                cmd = [python_exec, '-O', __file__] + cmd
+                script = __file__.replace('.pyo', '.py').replace('.pyc', '.py')
+                cmd = [python_exec, '-O', script] + cmd
                 self.log.debug("Running OOP: [%s]", ", ".join('"' + c + '"' for c in cmd))
                 self.proc = process.ProcessOpen(cmd, cwd=None, env=None)
                 assert self.proc.returncode is None, "Early process death!"
