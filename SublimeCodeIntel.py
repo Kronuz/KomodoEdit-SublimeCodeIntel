@@ -71,15 +71,15 @@ handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
 logger.handlers = [handler]
 logger.setLevel(logging.DEBUG)  # INFO
 
-HISTORY_SIZE = 64
-jump_history_by_window = {}  # map of window id -> collections.deque([], HISTORY_SIZE)
-
-status_msg = {}
-status_lineno = {}
-status_lock = threading.Lock()
-
 
 class CodeIntelHandler(object):
+    HISTORY_SIZE = 64
+    jump_history_by_window = {}  # map of window id -> collections.deque([], HISTORY_SIZE)
+
+    status_msg = {}
+    status_lineno = {}
+    status_lock = threading.Lock()
+
     def __init__(self, *args, **kwargs):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         super(CodeIntelHandler, self).__init__(*args, **kwargs)
@@ -123,169 +123,52 @@ class CodeIntelHandler(object):
             msg, ltype = ltype, 'info'
         msg = msg.strip()
 
-        status_lock.acquire()
+        CodeIntelHandler.status_lock.acquire()
         try:
-            status_msg.setdefault(lid, [None, None, 0])
-            if msg == status_msg[lid][1]:
+            CodeIntelHandler.status_msg.setdefault(lid, [None, None, 0])
+            if msg == CodeIntelHandler.status_msg[lid][1]:
                 return
-            status_msg[lid][2] += 1
-            order = status_msg[lid][2]
+            CodeIntelHandler.status_msg[lid][2] += 1
+            order = CodeIntelHandler.status_msg[lid][2]
         finally:
-            status_lock.release()
+            CodeIntelHandler.status_lock.release()
 
         def _set_status():
             is_warning = 'warning' in lid
             if not is_warning:
                 view_sel = view.sel()
                 lineno = view.rowcol(view_sel[0].end())[0] if view_sel else 0
-            status_lock.acquire()
+            CodeIntelHandler.status_lock.acquire()
             try:
-                current_type, current_msg, current_order = status_msg.get(lid, [None, None, 0])
+                current_type, current_msg, current_order = CodeIntelHandler.status_msg.get(lid, [None, None, 0])
                 if msg != current_msg and order == current_order:
                     _logger_obj = getattr(logger, ltype, None) if logger_obj is None else logger_obj
                     if _logger_obj:
                         _logger_obj(msg)
                     if ltype != 'debug':
                         view.set_status(lid, "%s: %s" % (ltype.capitalize(), msg))
-                        status_msg[lid] = [ltype, msg, order]
+                        CodeIntelHandler.status_msg[lid] = [ltype, msg, order]
                     if not is_warning:
-                        status_lineno[lid] = lineno
+                        CodeIntelHandler.status_lineno[lid] = lineno
             finally:
-                status_lock.release()
+                CodeIntelHandler.status_lock.release()
 
         def _erase_status():
-            status_lock.acquire()
+            CodeIntelHandler.status_lock.acquire()
             try:
-                if msg == status_msg.get(lid, [None, None, 0])[1]:
+                if msg == CodeIntelHandler.status_msg.get(lid, [None, None, 0])[1]:
                     view.erase_status(lid)
-                    status_msg[lid][1] = None
-                    if lid in status_lineno:
-                        del status_lineno[lid]
+                    CodeIntelHandler.status_msg[lid][1] = None
+                    if lid in CodeIntelHandler.status_lineno:
+                        del CodeIntelHandler.status_lineno[lid]
             finally:
-                status_lock.release()
+                CodeIntelHandler.status_lock.release()
 
         if msg:
             sublime.set_timeout(_set_status, delay or 0)
             sublime.set_timeout(_erase_status, timeout)
         else:
             sublime.set_timeout(_erase_status, delay or 0)
-
-    def set_tooltip(self, calltips, codeintel_tooltips='popup'):
-        """
-            codeintel_tooltips can be either:
-                popup
-                status
-                panel
-        """
-        view = self.view
-        if not view:
-            return
-        vid = view.id()
-        buf = self.buf_from_view(view)
-        if vid != buf.vid:
-            return
-
-        snippets = []
-        padding = '   '
-        for calltip in calltips:
-            tip_info = calltip.split('\n')
-            defn = tip_info[0]
-            text = ' '.join(tip_info[1:])
-            snippet = None
-
-            # TODO: This snippets are based and work for Python language.
-            # Other languages might need different treatment.
-            # Insert parameters as snippet:
-            m = re.search(r'([^\s]+)\(([^\[\(\)]*)', defn)
-            # Figure out how many arguments are there already:
-            text_in_current_line = buf.text_in_current_line[:-1]  # Remove next char after cursor
-            arguments = text_in_current_line.rpartition('(')[2].replace(' ', '').strip() or 0
-            if arguments:
-                initial_separator = ''
-                if arguments[-1] == ',':
-                    arguments = arguments[:-1]
-                else:
-                    initial_separator += ','
-                if not text_in_current_line.endswith(' '):
-                    initial_separator += ' '
-                arguments = arguments.count(',') + 1 if arguments else 0
-            if m:
-                params = [p.strip() for p in m.group(2).split(',')]
-                if params:
-                    n = 1
-                    snippet = []
-                    for i, p in enumerate(params):
-                        if p and i >= arguments:
-                            var, _, _ = p.partition('=')
-                            var = var.strip()
-                            if ' ' in var:
-                                var = var.split(' ')[1]
-                            if var[0] == '$':
-                                var = var[1:]
-                            snippet.append('${%s:%s}' % (n, var))
-                            n += 1
-                    snippet = ', '.join(snippet)
-                    if arguments and snippet:
-                        snippet = initial_separator + snippet
-                text += ' - ' + defn  # Add function to the end
-            else:
-                text = defn + ' ' + text  # No function match, just add the first line
-
-            # Wrap lines that are too long:
-            min_line_length = 80
-            max_line_length = 100
-            measured_tips = []
-            for i, tip in enumerate(tip_info):
-                if i == 0:
-                    measured_tips.append(tip + ' ' * max(0, min_line_length - len(tip)))
-                elif len(tip) > max_line_length:
-                    chunks = len(tip)
-                    for j in range(0, chunks, max_line_length):
-                        measured_tips.append(tip[j:j + max_line_length] + padding)
-                else:
-                    measured_tips.append(tip + padding)
-
-            # Insert tooltip snippet
-            snippets.extend(((padding if i > 0 else '') + l, snippet or '${0}') for i, l in enumerate(measured_tips))
-
-        if codeintel_tooltips == 'popup':
-            buf.cplns = snippets
-            view.run_command('auto_complete', {
-                'disable_auto_insert': True,
-                'api_completions_only': True,
-                'next_completion_if_showing': False,
-                'auto_complete_commit_on_tab': True,
-            })
-
-        elif codeintel_tooltips in ('status', 'panel'):
-            if codeintel_tooltips == 'status':
-                self.set_status('tip', text, timeout=15000)
-            else:
-                window = view.window()
-                output_panel = window.get_output_panel('tooltips')
-                output_panel.set_read_only(False)
-                text = '\n'.join(list(zip(*snippets))[0])
-                output_panel.run_command('tooltip_output', {'output': text})
-                output_panel.set_read_only(True)
-                window.run_command('show_panel', {'panel': 'output.tooltips'})
-                sublime.set_timeout(lambda: window.run_command('hide_panel', {'panel': 'output.tooltips'}), 15000)
-
-            if snippets:
-                # Insert function call snippets:
-                # func = m.group(1)
-                # scope = view.scope_name(pos)
-                # view.run_command('new_snippet', {'contents': snippets[0][0], 'tab_trigger': func, 'scope': scope})  # FIXME: Doesn't add the new snippet... is it possible to do so?
-                def _insert_snippet():
-                    # Check to see we are still at a position where the snippet is wanted:
-                    view_sel = view.sel()
-                    if not view_sel:
-                        return
-                    sel = view_sel[0]
-                    pos = sel.end()
-                    if not pos or pos != buf.original_pos:
-                        return
-                    view.run_command('insert_snippet', {'contents': snippets[0][0]})
-                sublime.set_timeout(_insert_snippet, 500)  # Delay snippet insertion a bit... it's annoying some times
 
     def pos2bytes(self, content, pos):
         return len(content[:pos].encode('utf-8'))
@@ -370,24 +253,95 @@ class CodeIntelHandler(object):
 
     def set_call_tip_info(self, buf, calltip, explicit, trg):
         print('set_call_tip_info', calltip, explicit)
-        self.set_tooltip([calltip])
+        view = self.view
+        if not view:
+            return
+        vid = view.id()
+        if vid != buf.vid:
+            return
+
+        snippets = []
+        # TODO: This snippets are created and work for Python language def functions.
+        # i.e. in the form: name(arg1, arg2, arg3)
+        # Other languages might need different treatment.
+
+        # Figure out how many arguments are there already:
+        text_in_current_line = buf.text_in_current_line[:-1]  # Remove next char after cursor
+        arguments = text_in_current_line.rpartition('(')[2].replace(' ', '').strip() or 0
+        if arguments:
+            initial_separator = ''
+            if arguments[-1] == ',':
+                arguments = arguments[:-1]
+            else:
+                initial_separator += ','
+            if not text_in_current_line.endswith(' '):
+                initial_separator += ' '
+            arguments = arguments.count(',') + 1 if arguments else 0
+
+        # Insert parameters as snippet:
+        snippet = None
+        tip_info = calltip.split('\n')
+        m = re.search(r'([^\s]+)\(([^\[\(\)]*)', tip_info[0])
+        if m:
+            params = [p.strip() for p in m.group(2).split(',')]
+            if params:
+                n = 1
+                snippet = []
+                for i, p in enumerate(params):
+                    if p and i >= arguments:
+                        var, _, _ = p.partition('=')
+                        var = var.strip()
+                        if ' ' in var:
+                            var = var.split(' ')[1]
+                        if var[0] == '$':
+                            var = var[1:]
+                        snippet.append('${%s:%s}' % (n, var))
+                        n += 1
+                snippet = ', '.join(snippet)
+                if arguments and snippet:
+                    snippet = initial_separator + snippet
+
+        # Wrap lines that are too long:
+        padding = '   '
+        min_line_length = 80
+        max_line_length = 100
+        measured_tips = []
+        for i, tip in enumerate(tip_info):
+            if i == 0:
+                measured_tips.append(tip + ' ' * max(0, min_line_length - len(tip)))
+            elif len(tip) > max_line_length:
+                chunks = len(tip)
+                for j in range(0, chunks, max_line_length):
+                    measured_tips.append(tip[j:j + max_line_length])
+            else:
+                measured_tips.append(tip)
+
+        # Insert tooltip snippet
+        snippets.extend(((padding if i > 0 else '') + l + (padding if i > 0 else ''), snippet or '${0}') for i, l in enumerate(measured_tips))
+
+        buf.cplns = snippets
+        view.run_command('auto_complete', {
+            'disable_auto_insert': True,
+            'api_completions_only': True,
+            'next_completion_if_showing': False,
+            'auto_complete_commit_on_tab': True,
+        })
 
     def set_auto_complete_info(self, buf, cplns, trg):
-        def _set_auto_complete_info():
-            view = self.view
-            if not view:
-                return
-            vid = view.id()
-            if vid != buf.vid:
-                return
-            buf.cplns = self.format_completions_by_language(cplns, buf.lang, buf.text_in_current_line, trg.get('type'))
-            view.run_command('auto_complete', {
-                'disable_auto_insert': True,
-                'api_completions_only': True,
-                'next_completion_if_showing': False,
-                'auto_complete_commit_on_tab': True,
-            })
-        sublime.set_timeout(_set_auto_complete_info, 0)
+        view = self.view
+        if not view:
+            return
+        vid = view.id()
+        if vid != buf.vid:
+            return
+
+        buf.cplns = self.format_completions_by_language(cplns, buf.lang, buf.text_in_current_line, trg.get('type'))
+        view.run_command('auto_complete', {
+            'disable_auto_insert': True,
+            'api_completions_only': True,
+            'next_completion_if_showing': False,
+            'auto_complete_commit_on_tab': True,
+        })
 
     def set_definitions_info(self, buf, defns, trg):
         view = self.view
@@ -413,9 +367,9 @@ class CodeIntelHandler(object):
 
         window = sublime.active_window()
         wid = window.id()
-        if wid not in jump_history_by_window:
-            jump_history_by_window[wid] = collections.deque([], HISTORY_SIZE)
-        jump_history = jump_history_by_window[wid]
+        if wid not in CodeIntelHandler.jump_history_by_window:
+            CodeIntelHandler.jump_history_by_window[wid] = collections.deque([], CodeIntelHandler.HISTORY_SIZE)
+        jump_history = CodeIntelHandler.jump_history_by_window[wid]
 
         # Save current position so we can return to it
         row, col = view.rowcol(view_sel[0].begin())
@@ -503,8 +457,8 @@ class BackToPythonDefinition(sublime_plugin.TextCommand):
 
         window = sublime.active_window()
         wid = window.id()
-        if wid in jump_history_by_window:
-            jump_history = jump_history_by_window[wid]
+        if wid in CodeIntelHandler.jump_history_by_window:
+            jump_history = CodeIntelHandler.jump_history_by_window[wid]
 
             if len(jump_history) > 0:
                 previous_location = jump_history.pop()
