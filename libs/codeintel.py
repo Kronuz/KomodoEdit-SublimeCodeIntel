@@ -47,6 +47,7 @@ import time
 import threading
 import logging
 import socket
+import weakref
 import functools
 
 import six.moves.queue
@@ -70,27 +71,38 @@ class CodeIntel(object):
         self.buffers = {}
         self._queue = six.moves.queue.Queue()
         self._quit_application = False  # app is shutting down, don't try to respawn
+        self._observers = weakref.WeakSet()
 
-    def _on_mgr_init(self, message, progress=None):
+    def add_observer(self, obj):
+        if hasattr(obj, 'observer'):
+            self._observers.add(obj)
+
+    def notify_observers(self, topic, data):
+        """Observer calls must be called on the main thread"""
+        if topic:
+            for obj in self._observers:
+                obj.observer(topic, data)
+
+    def _on_mgr_init(self, mgr, message, progress=None):
         summary = None
         if progress == "(ABORTED)":
             summary = "Code Intelligence Initialization Aborted"
-        elif not self.mgr or self.mgr.state is CodeIntelManager.STATE_DESTROYED:
-            summary = "startup failed: %s", message
-        elif self.mgr.state is CodeIntelManager.STATE_BROKEN:
+        elif not mgr or mgr.state is CodeIntelManager.STATE_DESTROYED:
+            summary = "Startup failed: %s", message
+        elif mgr.state is CodeIntelManager.STATE_BROKEN:
             summary = "There is an error with your code intelligence database; it must be reset before it can be used."
-        elif self.mgr.state is CodeIntelManager.STATE_READY:
+        elif mgr.state is CodeIntelManager.STATE_READY:
             pass  # nothing to report
         elif message is None and progress is None:
             pass  # nothing to report
         else:
             # progress update, not finished yet
             if isinstance(progress, (int, float)):
-                print("%s%% / %s%%" % (progress, 100))
+                self.notify_observers('progress', dict(message=message, progress=progress))
         if summary:
-            print(summary)
+            self.notify_observers('error_message', dict(message=summary))
         elif message:
-            print(message)
+            self.notify_observers('status_message', dict(message=message))
 
     def _on_mgr_shutdown(self, mgr):
         # The codeintel manager is going away, drop the reference to it
@@ -354,7 +366,6 @@ class CodeIntelManager(threading.Thread):
 
             if True:
                 python_exec = self.env['env'].get('PYTHON', 'python')
-                print(python_exec)
                 cmd = [python_exec, '-O', __file__] + cmd
                 self.log.debug("Running OOP: [%s]", ", ".join('"' + c + '"' for c in cmd))
                 self.proc = process.ProcessOpen(cmd, cwd=None, env=None)
@@ -384,7 +395,7 @@ class CodeIntelManager(threading.Thread):
             self.log.debug(message)
             self.pipe = None
             self.kill()
-            self._init_callback(message)
+            self._init_callback(self, message)
         else:
             self._send_init_requests()
 
@@ -412,7 +423,7 @@ class CodeIntelManager(threading.Thread):
                 self.kill()
             if state is not None:
                 self.state = state
-            self._init_callback(message, progress)
+            self._init_callback(self, message, progress)
 
         def get_citadel_langs(request, response):
             if not response.get('success', False):
@@ -705,26 +716,20 @@ class CodeIntelManager(threading.Thread):
         if callback:
             callback(request, response)
 
-    def notifyObservers(self, topic, data):
-        """Observer calls must be called on the main thread"""
-        if topic == '':
-            msg = data.get('message')
-            print(topic, msg)
-
     def do_scan_complete(self, response):
         """Scan complete unsolicited response"""
         path = response.get('path')
         if path:
             buf = self.service.buf_from_path(path)
-            self.notifyObservers('codeintel_buffer_scanned', buf)
+            self.service.notify_observers('codeintel_buffer_scanned', buf)
 
     def do_report_message(self, response):
         """Report a message from codeintel (typically, scan status) unsolicited response"""
-        self.notifyObservers('status_message', response)
+        self.service.notify_observers('status_message', response)
 
     def do_report_error(self, response):
         """Report a codeintel error into the error log"""
-        self.notifyObservers('status_message', response)
+        self.service.notify_observers('error_message', response)
 
     def do_quit(self, request, response):
         """Quit successful"""

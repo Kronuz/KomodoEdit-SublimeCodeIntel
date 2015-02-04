@@ -83,6 +83,7 @@ class CodeIntelHandler(object):
     def __init__(self, *args, **kwargs):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         super(CodeIntelHandler, self).__init__(*args, **kwargs)
+        ci.add_observer(self)
 
     @property
     def window(self):
@@ -110,7 +111,7 @@ class CodeIntelHandler(object):
     def view(self, value):
         self._view = value
 
-    def set_status(self, ltype, msg=None, timeout=None, delay=0, lid='CodeIntel', logger_obj=None):
+    def set_status(self, ltype, msg=None, timeout=None, delay=0, lid='SublimeCodeIntel', logger_obj=None):
         view = self.view
         if not view:
             return
@@ -146,7 +147,7 @@ class CodeIntelHandler(object):
                     if _logger_obj:
                         _logger_obj(msg)
                     if ltype != 'debug':
-                        view.set_status(lid, "%s: %s" % (ltype.capitalize(), msg))
+                        view.set_status(lid, "%s %s: %s" % (lid, ltype.capitalize(), msg.rstrip('.')))
                         CodeIntelHandler.status_msg[lid] = [ltype, msg, order]
                     if not is_warning:
                         CodeIntelHandler.status_lineno[lid] = lineno
@@ -236,10 +237,9 @@ class CodeIntelHandler(object):
 
     def on_document_scanned(self, buf):
         """Handler callback for scan_document"""
-        print('on_document_scanned')
 
     def on_get_calltip_range(self, buf, start, end):
-        print('on_get_calltip_range', start, end)
+        pass
 
     def on_trg_from_pos(self, buf, context, trg):
         if context == 'trg_from_pos':
@@ -248,11 +248,9 @@ class CodeIntelHandler(object):
             buf.async_eval_at_trg(self, trg)
 
     def set_status_message(self, buf, message, highlight=None):
-        print('set_status_message', message)
         self.set_status(message)
 
     def set_call_tip_info(self, buf, calltip, explicit, trg):
-        print('set_call_tip_info', calltip, explicit)
         view = self.view
         if not view:
             return
@@ -319,13 +317,14 @@ class CodeIntelHandler(object):
         # Insert tooltip snippet
         snippets.extend(((padding if i > 0 else '') + l + (padding if i > 0 else ''), snippet or '${0}') for i, l in enumerate(measured_tips))
 
-        buf.cplns = snippets
-        view.run_command('auto_complete', {
-            'disable_auto_insert': True,
-            'api_completions_only': True,
-            'next_completion_if_showing': False,
-            'auto_complete_commit_on_tab': True,
-        })
+        buf.cplns = snippets or None
+        if buf.cplns:
+            view.run_command('auto_complete', {
+                'disable_auto_insert': True,
+                'api_completions_only': True,
+                'next_completion_if_showing': False,
+                'auto_complete_commit_on_tab': True,
+            })
 
     def set_auto_complete_info(self, buf, cplns, trg):
         view = self.view
@@ -335,13 +334,16 @@ class CodeIntelHandler(object):
         if vid != buf.vid:
             return
 
-        buf.cplns = self.format_completions_by_language(cplns, buf.lang, buf.text_in_current_line, trg.get('type'))
-        view.run_command('auto_complete', {
-            'disable_auto_insert': True,
-            'api_completions_only': True,
-            'next_completion_if_showing': False,
-            'auto_complete_commit_on_tab': True,
-        })
+        cplns = self.format_completions_by_language(cplns, buf.lang, buf.text_in_current_line, trg.get('type'))
+
+        buf.cplns = cplns or None
+        if buf.cplns:
+            view.run_command('auto_complete', {
+                'disable_auto_insert': True,
+                'api_completions_only': True,
+                'next_completion_if_showing': False,
+                'auto_complete_commit_on_tab': True,
+            })
 
     def set_definitions_info(self, buf, defns, trg):
         view = self.view
@@ -381,8 +383,25 @@ class CodeIntelHandler(object):
 
 
 class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
-    def on_activated(self, view):
-        print('on_activated')
+    def observer(self, topic, data):
+        if topic == 'progress':
+            message = data.get('message')
+            progress = data.get('progress')
+            if message:
+                message = "%s - %s%% / %s%%" % (message, progress, 100)
+            else:
+                message = "%s%% / %s%%" % (progress, 100)
+            self.set_status('info', message, lid='SublimeCodeIntel Notification')
+        elif topic == 'status_message':
+            message = data.get('message')
+            if message:
+                self.set_status('info', message, lid='SublimeCodeIntel Notification')
+        elif topic == 'error_message':
+            message = data.get('message')
+            if message:
+                self.set_status('error', message, lid='SublimeCodeIntel Notification')
+        elif 'codeintel_buffer_scanned':
+            pass
 
     def on_pre_save(self, view):
         if view.is_dirty():
@@ -406,30 +425,33 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         if not current_char or current_char == '\n':
             return
 
-        # print('on_modified', "'%s'" % current_char, view.command_history(1), view.command_history(0), view.command_history(-1))
-        if (not hasattr(view, 'command_history') or view.command_history(1)[1] is None and (
-                view.command_history(0)[0] == 'insert_completion' or
-                view.command_history(0)[0] in 'insert' and (
-                    view.command_history(0)[1]['characters'][-1] != '\n'
-                ) or
-                view.command_history(-1)[0] in ('insert', 'paste') and (
-                    view.command_history(0)[0] == 'commit_completion' or
-                    view.command_history(0)[0] == 'insert_snippet' and view.command_history(0)[1]['contents'] == '($0)'
+        command_history = getattr(view, 'command_history', None)
+        if command_history:
+            redo_command = command_history(1)
+            previous_command = view.command_history(0)
+            before_previous_command = view.command_history(-1)
+        else:
+            redo_command = previous_command = before_previous_command = None
+
+        # print('on_modified', "'%s'" % current_char, redo_command, previous_command, before_previous_command)
+        if not command_history or redo_command[1] is None and (
+                previous_command[0] in ('insert', 'paste') or
+                before_previous_command[0] in ('insert', 'paste') and (
+                    previous_command[0] == 'commit_completion' or
+                    previous_command[0] == 'insert_completion' or
+                    previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] == '($0)'
                 )
-        )):
+        ):
             buf = self.buf_from_view(view)
-            if view.command_history(0)[0] == 'commit_completion':
-                pass
-            else:
-                if buf:
-                    is_stop_char = current_char in buf.cpln_stop_chars
+            if buf:
+                is_stop_char = current_char in buf.cpln_stop_chars
 
-                    # Stop characters hide autocomplete window
-                    if is_stop_char:
-                        view.run_command('hide_auto_complete')
+                # Stop characters hide autocomplete window
+                if is_stop_char:
+                    view.run_command('hide_auto_complete')
 
-                    buf.scan_document(self, True)
-                    buf.trg_from_pos(self, True)
+                buf.scan_document(self, True)
+                buf.trg_from_pos(self, True)
 
     def on_selection_modified(self, view):
         pass
