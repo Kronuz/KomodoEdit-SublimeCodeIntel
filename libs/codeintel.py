@@ -59,7 +59,13 @@ import socket
 import functools
 
 import six.moves.queue
-from codeintel2.common import PRIORITY_CURRENT, PRIORITY_IMMEDIATE
+
+# Priorities at which scanning requests can be scheduled.
+PRIORITY_CONTROL = 0        # Special sentinal priority to control scheduler
+PRIORITY_IMMEDIATE = 1      # UI is requesting info on this file now
+PRIORITY_CURRENT = 2        # UI requires info on this file soon
+PRIORITY_OPEN = 3           # UI will likely require info on this file soon
+PRIORITY_BACKGROUND = 4     # info may be needed sometime
 
 logger_name = 'codeintel'
 logger = logging.getLogger(logger_name)
