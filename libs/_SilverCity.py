@@ -9,7 +9,7 @@ platform = None
 
 if VERSION >= (3, 3):
     try:
-        from _local_arch._SilverCity import *  # NOQA
+        from _local_arch_py3._SilverCity import *  # NOQA
         platform = "Local arch"
     except ImportError:
         if PLATFORM == 'darwin':
@@ -31,7 +31,7 @@ if VERSION >= (3, 3):
                 platform = "Windows 32 bits"
 elif VERSION >= (2, 6):
     try:
-        from _local_arch._SilverCity import *  # NOQA
+        from _local_arch_py2._SilverCity import *  # NOQA
         platform = "Local arch"
     except ImportError:
         if PLATFORM == 'darwin':

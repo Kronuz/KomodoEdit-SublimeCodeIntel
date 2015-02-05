@@ -12,7 +12,7 @@ elif VERSION >= (2, 6):
     platform = None
 
     try:
-        from _local_arch.ciElementTree import *  # NOQA
+        from _local_arch_py2.ciElementTree import *  # NOQA
         platform = "Local arch"
     except ImportError:
         if PLATFORM == 'darwin':

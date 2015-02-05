@@ -9,7 +9,7 @@ if VERSION >= (3, 3):
     platform = None
 
     try:
-        from _local_arch._ielementtree import *  # NOQA
+        from _local_arch_py3._ielementtree import *  # NOQA
         platform = "Local arch"
     except ImportError:
         if PLATFORM == 'darwin':
