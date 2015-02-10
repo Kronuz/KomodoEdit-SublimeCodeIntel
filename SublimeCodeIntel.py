@@ -221,6 +221,39 @@ class CodeIntelHandler(object):
         buf.text_in_current_line = text_in_current_line
         buf.original_pos = original_pos
 
+        window = sublime.active_window()
+        extra_paths = os.pathsep.join(window.folders())
+
+        javascriptExtraPaths = extra_paths
+        nodejsExtraPaths = extra_paths
+        perlExtraPaths = extra_paths
+        phpExtraPaths = extra_paths
+        python3ExtraPaths = extra_paths
+        pythonExtraPaths = extra_paths
+        rubyExtraPaths = extra_paths
+
+        buf.prefs = {
+            'codeintel_max_recursive_dir_depth': 10,
+            'codeintel_scan_files_in_project': True,
+            'codeintel_selected_catalogs': [],
+            'defaultHTML5Decl': '-//W3C//DTD HTML 5//EN',
+            'defaultHTMLDecl': '-//W3C//DTD HTML 5//EN',
+            'javascriptExtraPaths': javascriptExtraPaths,
+            'nodejsDefaultInterpreter': '',
+            'nodejsExtraPaths': nodejsExtraPaths,
+            'perl': '',
+            'perlExtraPaths': perlExtraPaths,
+            'php': '',
+            'phpConfigFile': '',
+            'phpExtraPaths': phpExtraPaths,
+            'python': '',
+            'python3': '',
+            'python3ExtraPaths': python3ExtraPaths,
+            'pythonExtraPaths': pythonExtraPaths,
+            'ruby': '',
+            'rubyExtraPaths': rubyExtraPaths,
+        }
+
         return buf
 
     def format_completions_by_language(self, cplns, language, text_in_current_line, type):

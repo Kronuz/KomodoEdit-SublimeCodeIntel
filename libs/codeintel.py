@@ -249,32 +249,30 @@ class CodeIntelManager(threading.Thread):
     stdlib_langs = []  # languages which support standard libraries
     languages = {}
     available_catalogs = []  # see get-available-catalogs command
-    env = {
-        'env': dict(os.environ),
-        'prefs': [
-            {
-                'codeintel_max_recursive_dir_depth': 10,
-                'codeintel_scan_files_in_project': True,
-                'codeintel_selected_catalogs': [],
-                'defaultHTML5Decl': '-//W3C//DTD HTML 5//EN',
-                'defaultHTMLDecl': '-//W3C//DTD HTML 5//EN',
-                'javascriptExtraPaths': '',
-                'nodejsDefaultInterpreter': '',
-                'nodejsExtraPaths': '',
-                'perl': '',
-                'perlExtraPaths': '',
-                'php': '',
-                'phpConfigFile': '',
-                'phpExtraPaths': '',
-                'python': '',
-                'python3': '',
-                'python3ExtraPaths': '',
-                'pythonExtraPaths': '',
-                'ruby': '',
-                'rubyExtraPaths': '',
-            },
-        ],
-    }
+    env = dict(os.environ)
+    prefs = [
+        {
+            'codeintel_max_recursive_dir_depth': 10,
+            'codeintel_scan_files_in_project': True,
+            'codeintel_selected_catalogs': [],
+            'defaultHTML5Decl': '-//W3C//DTD HTML 5//EN',
+            'defaultHTMLDecl': '-//W3C//DTD HTML 5//EN',
+            'javascriptExtraPaths': '',
+            'nodejsDefaultInterpreter': '',
+            'nodejsExtraPaths': '',
+            'perl': '',
+            'perlExtraPaths': '',
+            'php': '',
+            'phpConfigFile': '',
+            'phpExtraPaths': '',
+            'python': '',
+            'python3': '',
+            'python3ExtraPaths': '',
+            'pythonExtraPaths': '',
+            'ruby': '',
+            'rubyExtraPaths': '',
+        },
+    ]
 
     def __init__(self, service, init_callback=None, shutdown_callback=None):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
@@ -364,7 +362,7 @@ class CodeIntelManager(threading.Thread):
             cmd = [db_base_dir, connect, 'WARNING', log_file]
 
             if True:
-                python_exec = self.env['env'].get('PYTHON', 'python')
+                python_exec = self.env.get('PYTHON', 'python')
                 script = __file__.replace('.pyo', '.py').replace('.pyc', '.py')
                 cmd = [python_exec, '-O', script] + cmd
                 self.log.debug("Running OOP: [%s]", ", ".join('"' + c + '"' for c in cmd))
@@ -548,19 +546,20 @@ class CodeIntelManager(threading.Thread):
         self._send(callback=get_xml_langs, command='get-languages', type='xml')
         self._send(callback=get_stdlib_langs, command='get-languages', type='stdlib-supported')
 
-        self.set_global_environment(self.env)
+        self.set_global_environment(self.env, self.prefs)
 
         def update_callback(response):
             if not response.get("success", False):
                 update("Failed to get available catalogs:", response)
         self.update_catalogs(update_callback=update_callback)
 
-    def set_global_environment(self, env):
+    def set_global_environment(self, env, prefs):
         self.env = env
+        self.prefs = prefs
         self._send(
             command='set-environment',
-            env=env['env'],
-            prefs=env['prefs'],
+            env=self.env,
+            prefs=self.prefs,
         )
 
     def update_catalogs(self, update_callback=None):
@@ -744,17 +743,37 @@ class CodeIntelBuffer(object):
     """A buffer-like object for codeintel; this is specific to a
     CodeIntelManager instance."""
 
-    def __init__(self, service, vid, lang=None, path=None, text=None):
+    def __init__(self, service, vid, lang=None, path=None, text=None, env=None, prefs=None):
         self.log = logging.getLogger(logger_name + '.' + self.__class__.__name__)
         self.service = service
         self.vid = vid
         self.lang = lang
         self.path = path
         self.text = text
+        self._env = env
+        self._prefs = [prefs] if isinstance(prefs, dict) else prefs
 
     @property
     def env(self):
-        return self.service.mgr.env
+        env = dict(self.service.mgr.env or {})
+        env.update(self._env or {})
+        return env
+
+    @env.setter
+    def env(self, env):
+        self._env = env
+
+    @property
+    def prefs(self):
+        prefs = list(self.service.mgr.prefs or [])
+        for pref in self._prefs or []:
+            if pref not in prefs:
+                prefs.append(pref)
+        return prefs
+
+    @prefs.setter
+    def prefs(self, prefs):
+        self._prefs = [prefs] if isinstance(prefs, dict) else prefs
 
     @property
     def cpln_fillup_chars(self):
@@ -788,7 +807,10 @@ class CodeIntelBuffer(object):
             command='scan-document',
             path=self.path,
             language=self.lang,
-            env=self.env,
+            env={
+                'env': self.env,
+                'prefs': self.prefs,
+            },
             text=self.text,
             encoding='utf-8',
             discardable=True,
@@ -824,7 +846,10 @@ class CodeIntelBuffer(object):
             path=self.path,
             language=self.lang,
             pos=self.pos if pos is None else pos,
-            env=self.env,
+            env={
+                'env': self.env,
+                'prefs': self.prefs,
+            },
             implicit=implicit,
             text=self.text,
             encoding='utf-8',
@@ -837,7 +862,10 @@ class CodeIntelBuffer(object):
             path=self.path,
             language=self.lang,
             pos=self.pos if pos is None else pos,
-            env=self.env,
+            env={
+                'env': self.env,
+                'prefs': self.prefs,
+            },
             text=self.text,
             encoding='utf-8',
             callback=functools.partial(self._post_trg_from_pos_handler, handler, 'preceding_trg_from_pos'),
@@ -851,7 +879,10 @@ class CodeIntelBuffer(object):
             path=self.path,
             language=self.lang,
             pos=self.pos if pos is None else pos,
-            env=self.env,
+            env={
+                'env': self.env,
+                'prefs': self.prefs,
+            },
             text=self.text,
             encoding='utf-8',
             callback=functools.partial(self._post_trg_from_pos_handler, handler, 'defn_trg_from_pos')
@@ -924,7 +955,10 @@ class CodeIntelBuffer(object):
             trg_pos=trg_pos,
             calltip=calltip,
             curr_pos=curr_pos,
-            env=self.env,
+            env={
+                'env': self.env,
+                'prefs': self.prefs,
+            },
             callback=callback,
         )
 
