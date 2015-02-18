@@ -294,7 +294,6 @@ class CodeIntelHandler(object):
             if vid != buf.vid:
                 return
 
-            snippets = []
             # TODO: This snippets are created and work for Python language def functions.
             # i.e. in the form: name(arg1, arg2, arg3)
             # Other languages might need different treatment.
@@ -315,34 +314,50 @@ class CodeIntelHandler(object):
             # Insert parameters as snippet:
             snippet = None
             tip_info = calltip.split('\n')
-            m = re.search(r'([^\s]+)\(([^\[\(\)]*)', tip_info[0])
+            tip0 = tip_info[0]
+            m = re.search(r'^(.*\()([^\[\(\)]*)(.*)$', tip0)
             if m:
                 params = [p.strip() for p in m.group(2).split(',')]
                 if params:
                     n = 1
+                    tip0 = []
                     snippet = []
                     for i, p in enumerate(params):
-                        if p and i >= arguments:
-                            var, _, _ = p.partition('=')
+                        if p:
+                            var, sep, default = p.partition('=')
                             var = var.strip()
-                            if ' ' in var:
-                                var = var.split(' ')[1]
-                            if var[0] == '$':
-                                var = var[1:]
-                            snippet.append('${%s:%s}' % (n, var))
-                            n += 1
+                            tvar = var
+                            if sep:
+                                tvar = "%s<i>=%s</i>" % (tvar, default)
+                            # if i == arguments:
+                            #     tvar = "<b>%s</b>" % tvar
+                            tip0.append(tvar)
+                            if i >= arguments:
+                                if ' ' in var:
+                                    var = var.split(' ')[1]
+                                if var[0] == '$':
+                                    var = var[1:]
+                                snippet.append('${%s:%s}' % (n, var))
+                                n += 1
+                    tip0 = "<h1>%s%s%s</h1>" % (m.group(1), ', '.join(tip0), m.group(3))
                     snippet = ', '.join(snippet)
                     if arguments and snippet:
                         snippet = initial_separator + snippet
+            css = (
+                "html {background-color: #232628; color: #999999;}" +
+                "body {font-size: 10px; }" +
+                "b {color: #6699cc; }" +
+                "a {color: #99cc99; }" +
+                "h1 {color: #cccccc; font-weight: normal; font-size: 11px; }"
+            )
 
             # Wrap lines that are too long:
-            padding = '   '
             min_line_length = 80
             max_line_length = 100
             measured_tips = []
             for i, tip in enumerate(tip_info):
                 if i == 0:
-                    measured_tips.append(tip + ' ' * max(0, min_line_length - len(tip)))
+                    measured_tips.append(tip0 + ' ' * max(0, min_line_length - len(tip)))
                 elif len(tip) > max_line_length:
                     chunks = len(tip)
                     for j in range(0, chunks, max_line_length):
@@ -350,17 +365,26 @@ class CodeIntelHandler(object):
                 else:
                     measured_tips.append(tip)
 
-            # Insert tooltip snippet
-            snippets.extend(((padding if i > 0 else '') + l + (padding if i > 0 else ''), snippet or '${0}') for i, l in enumerate(measured_tips))
+            if hasattr(view, 'show_popup'):
+                def insert_snippet(href):
+                    view.run_command('insert_snippet', {'contents': snippet})
+                    view.hide_popup()
 
-            buf.cplns = snippets or None
-            if buf.cplns:
-                view.run_command('auto_complete', {
-                    'disable_auto_insert': True,
-                    'api_completions_only': True,
-                    'next_completion_if_showing': False,
-                    'auto_complete_commit_on_tab': True,
-                })
+                view.show_popup('<style>%s</style>%s<br><br><a href="insert">insert</a>' % (css, "<br>".join(measured_tips)), location=-1, max_width=600, on_navigate=insert_snippet)
+
+            else:
+                # Insert tooltip snippet
+                padding = '   '
+                snippets = [((padding if i > 0 else '') + l + (padding if i > 0 else ''), snippet or '${0}') for i, l in enumerate(measured_tips)]
+
+                buf.cplns = snippets or None
+                if buf.cplns:
+                    view.run_command('auto_complete', {
+                        'disable_auto_insert': True,
+                        'api_completions_only': True,
+                        'next_completion_if_showing': False,
+                        'auto_complete_commit_on_tab': True,
+                    })
         sublime.set_timeout(_set_call_tip_info, 0)
 
     def set_auto_complete_info(self, buf, cplns, trg):
