@@ -55,6 +55,7 @@ if arch_path not in sys.path:
 
 import re
 import logging
+import textwrap
 import threading
 import collections
 
@@ -352,25 +353,17 @@ class CodeIntelHandler(object):
             )
 
             # Wrap lines that are too long:
-            min_line_length = 80
-            max_line_length = 100
-            measured_tips = []
-            for i, tip in enumerate(tip_info):
-                if i == 0:
-                    measured_tips.append(tip0 + ' ' * max(0, min_line_length - len(tip)))
-                elif len(tip) > max_line_length:
-                    chunks = len(tip)
-                    for j in range(0, chunks, max_line_length):
-                        measured_tips.append(tip[j:j + max_line_length])
-                else:
-                    measured_tips.append(tip)
+            wrapper = textwrap.TextWrapper(width=100, break_on_hyphens=False, break_long_words=False)
+            measured_tips = [tip0]
+            for t in tip_info[1:]:
+                measured_tips.extend(wrapper.wrap(t))
 
             if hasattr(view, 'show_popup'):
                 def insert_snippet(href):
                     view.run_command('insert_snippet', {'contents': snippet})
                     view.hide_popup()
 
-                view.show_popup('<style>%s</style>%s<br><br><a href="insert">insert</a>' % (css, "<br>".join(measured_tips)), location=-1, max_width=600, on_navigate=insert_snippet)
+                view.show_popup('<style>%s</style>%s<br><br><a href="insert">insert</a>' % (css, "<br>".join(measured_tips)), location=-1, max_width=700, on_navigate=insert_snippet)
 
             else:
                 # Insert tooltip snippet
