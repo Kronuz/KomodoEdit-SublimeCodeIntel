@@ -41,18 +41,6 @@ import sys
 __file__ = os.path.normpath(os.path.abspath(__file__))
 __path__ = os.path.dirname(__file__)
 
-libs_path = os.path.normpath(os.path.join(__path__, 'libs'))
-if libs_path not in sys.path:
-    sys.path.insert(0, libs_path)
-
-common_path = os.path.normpath(os.path.join(__path__, 'libs', 'common'))
-if common_path not in sys.path:
-    sys.path.insert(0, common_path)
-
-arch_path = os.path.normpath(os.path.join(__path__, 'arch'))
-if arch_path not in sys.path:
-    sys.path.insert(0, arch_path)
-
 import re
 import logging
 import textwrap
