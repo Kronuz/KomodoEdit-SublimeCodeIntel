@@ -1,1 +1,1 @@
-../CodeIntel/codeintel/__init__.py
+../CodeIntel/codeintel/codeintel.py
