@@ -58,11 +58,11 @@ from codeintel import CodeIntel, CodeIntelBuffer
 
 logger_name = 'CodeIntel'
 logger = logging.getLogger(logger_name)
-logger.setLevel(logging.INFO)  # INFO
+logger.setLevel(logging.WARNING)  # WARNING
 
-handler = logging.StreamHandler(sys.stderr)
-handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
-logger.handlers = [handler]
+# handler = logging.StreamHandler(sys.stderr)
+# handler.setFormatter(logging.Formatter("%(name)s: %(levelname)s: %(message)s"))
+# logger.handlers = [handler]
 
 
 class CodeIntelHandler(object):
