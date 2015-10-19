@@ -180,10 +180,11 @@ class CodeIntelHandler(object):
 
     def guess_language(self, view, path):
         lang = os.path.splitext(os.path.basename(view.settings().get('syntax')))[0]
-        lang = settings.get('codeintel_syntax_map').get(lang, lang)
-        if lang in settings.get('codeintel_disabled_languages'):
+        language = settings.get('codeintel_syntax_map').get(lang, lang)
+        logger.info("Language guessed: %s (for %s)", language, lang)
+        if language in settings.get('codeintel_disabled_languages'):
             return None
-        return lang
+        return language
 
     def buf_from_view(self, view):
         if not view:
