@@ -1,0 +1,16 @@
+SublimeCodeIntel v2.0.2 Release Notes
+=====================================
+[Please restart Sublime Text after reading this. In case of trouble, please read the Troubleshooting section in the README]
+
+
+CHANGES/FIXES
+
+* Initial Sublime Text 3 support!
+
++ OpenKomodo codebase updated to r13636
+
++ Snippets insertion delayed a bit.
+
++ Tooltips are removed when line changes.
+
+- Improved autocomplete in HTML.
