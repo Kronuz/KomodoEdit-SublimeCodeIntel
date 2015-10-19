@@ -561,7 +561,9 @@ def settings_changed():
     oop_command = settings.get('codeintel_oop_command')
     log_levels = settings.get('codeintel_log_levels')
     env = dict(os.environ)
-    env.update(settings.get('codeintel_env'))
+    codeintel_env = settings.get('codeintel_env')
+    if codeintel_env:
+        env.update(codeintel_env)
 
     prefs = {
         'codeintel_max_recursive_dir_depth': settings.get('codeintel_max_recursive_dir_depth'),
