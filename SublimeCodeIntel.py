@@ -434,24 +434,29 @@ class CodeIntelHandler(object):
             window.open_file(jump_location, sublime.ENCODED_POSITION)
         sublime.set_timeout(_set_definitions_info, 0)
 
+    def done():
+        pass
+
 
 class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
-    def observer(self, topic, data):
+    def observer(self, topic, response):
         def _observer():
+            message = response.get('message')
+            if message:
+                stack = response.get('stack')
+                if stack:
+                    logger.error(message.rstrip() + "\n" + stack)
             if topic == 'progress':
-                message = data.get('message')
-                progress = data.get('progress')
+                progress = response.get('progress')
                 if message:
                     message = "%s - %s%% / %s%%" % (message, progress, 100)
                 else:
                     message = "%s%% / %s%%" % (progress, 100)
                 self.set_status('info', message, lid='SublimeCodeIntel Notification')
             elif topic == 'status_message':
-                message = data.get('message')
                 if message:
                     self.set_status('info', message, lid='SublimeCodeIntel Notification')
             elif topic == 'error_message':
-                message = data.get('message')
                 if message:
                     self.set_status('error', message, lid='SublimeCodeIntel Notification')
             elif 'codeintel_buffer_scanned':
