@@ -68,6 +68,7 @@ EXTRA_PATHS_MAP = {
     'Python3': 'python3ExtraPaths',
     'Python': 'pythonExtraPaths',
     'Ruby': 'rubyExtraPaths',
+    'C++': 'cppExtraPaths',
 }
 
 
