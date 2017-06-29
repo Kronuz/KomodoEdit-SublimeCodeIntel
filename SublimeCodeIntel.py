@@ -52,6 +52,8 @@ import sublime_plugin
 
 from codeintel import CodeIntel, CodeIntelBuffer
 
+settings_name = 'SublimeCodeIntel'
+
 settings = None
 logger_name = 'CodeIntel'
 logger = logging.getLogger(logger_name)
@@ -578,6 +580,12 @@ def get_setting(lang, setting, default=None):
 
 
 def settings_changed():
+    """Restores user settings."""
+    global settings
+
+    if settings is None:
+        settings = sublime.load_settings(settings_name + '.sublime-settings')
+
     excluded = settings.get('codeintel_scan_exclude_paths')
     if excluded:
         ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
@@ -631,14 +639,8 @@ def settings_changed():
 
 
 def plugin_loaded():
-    """Restores user settings."""
-    global ci, settings
-
-    settings_name = 'SublimeCodeIntel'
-    settings = sublime.load_settings(settings_name + '.sublime-settings')
-    settings.add_on_change(settings_name, settings_changed)
-
     settings_changed()
+    settings.add_on_change(settings_name, settings_changed)
 
 
 ci = CodeIntel()
