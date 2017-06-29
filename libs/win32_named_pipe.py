@@ -1,1 +1,1 @@
-../../CodeIntel/codeintel/win32_named_pipe.py
+../../KomodoEdit-CodeIntel/codeintel/win32_named_pipe.py

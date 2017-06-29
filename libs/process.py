@@ -1,1 +1,1 @@
-../../CodeIntel/codeintel/process.py
+../../KomodoEdit-CodeIntel/codeintel/process.py
