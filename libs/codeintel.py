@@ -1,1 +1,1 @@
-../../KomodoEdit-CodeIntel/codeintel/codeintel.py
+../../KomodoEdit-CodeIntel/codeintel/client.py
