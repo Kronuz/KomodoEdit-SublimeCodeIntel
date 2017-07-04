@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta9"
+VERSION = "3.0.0-beta10"
 
 
 import os
@@ -453,24 +453,29 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
             return message
 
         def _observer():
-            if topic == 'progress':
-                message = _get_and_log_message(data)
-                progress = data.get('progress')
-                if message:
-                    message = "%s - %s%% / %s%%" % (message, progress, 100)
-                else:
-                    message = "%s%% / %s%%" % (progress, 100)
-                self.set_status('info', message, lid='SublimeCodeIntel Notification')
-            elif topic == 'status_message':
-                message = _get_and_log_message(data)
-                if message:
-                    self.set_status('info', message, lid='SublimeCodeIntel Notification')
+            if topic == 'status_message':
+                ltype = 'info'
             elif topic == 'error_message':
-                message = _get_and_log_message(data)
-                if message:
-                    self.set_status('error', message, lid='SublimeCodeIntel Notification')
+                ltype = 'error'
             elif 'codeintel_buffer_scanned':
-                pass
+                return
+            else:
+                return
+            progress = data.get('progress')
+            if progress is not None:
+                total = data.get('total', 100)
+                if total == 100:
+                    progress = "%s%%" % progress
+                else:
+                    progress = "%s/%s" % (progress, total)
+            message = _get_and_log_message(data)
+            if progress and message:
+                message = "%s - %s" % (progress, message)
+            elif progress:
+                message = progress
+            elif not message:
+                return
+            self.set_status(ltype, message, lid='SublimeCodeIntel Notification')
         sublime.set_timeout(_observer, 0)
 
     def on_pre_save(self, view):
