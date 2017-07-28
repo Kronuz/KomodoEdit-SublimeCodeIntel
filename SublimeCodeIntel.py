@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.10"
+VERSION = "3.0.0-beta.11"
 
 
 import os
@@ -596,7 +596,8 @@ def settings_changed():
         ex = [os.path.normcase(os.path.normpath(e)).rstrip(os.sep) for e in excluded]
         settings.set('codeintel_scan_exclude_paths', ex)
 
-    oop_command = settings.get('codeintel_oop_command')
+    codeintel_command = settings.get('codeintel_command')
+    oop_mode = settings.get('codeintel_oop_mode')
     log_levels = settings.get('codeintel_log_levels')
     env = dict(os.environ)
     codeintel_env = settings.get('codeintel_env')
@@ -636,7 +637,8 @@ def settings_changed():
     else:
         ci.activate(
             reset_db_as_necessary=False,
-            oop_command=oop_command,
+            codeintel_command=codeintel_command,
+            oop_mode=oop_mode,
             log_levels=log_levels,
             env=env,
             prefs=prefs,
