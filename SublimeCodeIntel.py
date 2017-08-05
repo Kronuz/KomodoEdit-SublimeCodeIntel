@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.11"
+VERSION = "3.0.0-beta.12"
 
 
 import os
@@ -63,6 +63,7 @@ if logger.root.handlers:
 
 
 EXTRA_PATHS_MAP = {
+    'ECMAScript': 'ecmascriptExtraPaths',
     'JavaScript': 'javascriptExtraPaths',
     'Node.js': 'nodejsExtraPaths',
     'Perl': 'perlExtraPaths',
@@ -259,12 +260,48 @@ class CodeIntelHandler(object):
 
     def format_completions_by_language(self, cplns, language, text_in_current_line, type):
         function = None if 'import ' in text_in_current_line else 'function'
-        get_desc = lambda c: c[2] if len(c) > 2 else c[1]
-        get_name = lambda c: c[1]
-        get_type = lambda c: c[0].title()
+
+        def get_desc(c):
+            return c[2] if len(c) > 2 else c[1]
+
+        def get_name(c):
+            name = c[1]
+            name = name.replace("$", "\\$")
+            if c[0] == function:
+                name += "($0)"
+            return name
+
+        def get_type(c):
+            return c[0].title()
+
         if language == 'PHP' and type != 'object-members':
-            get_desc = get_name = lambda c: ('$' + c[1]) if c[0] == 'variable' else c[1]
-        return [('%s\t〔%s〕' % (get_desc(c), get_type(c)), get_name(c).replace("$", "\\$") + ('($0)' if c[0] == function else '')) for c in cplns]
+            def get_name(c):
+                if c[0] == 'variable':
+                    name = "$" + c[1]
+                else:
+                    name = c[1]
+                name = name.replace("$", "\\$")
+                if c[0] == function:
+                    name += "($0)"
+                return name
+
+        if language == 'ECMAScript':
+            def get_name(c):
+                name = c[1]
+                name = name.replace("$", "\\$")
+                if c[0] == 'attribute':
+                    name += "={ $0 }"
+                return name
+
+        def sorter(c):
+            return {
+                'import': '_',
+                'attribute': '__',
+                'variable': '__',
+                'function': '___',
+            }.get(c[0].lower(), c[0]), c[1]
+
+        return [('%s\t〔%s〕' % (get_desc(c), get_type(c)), get_name(c)) for c in sorted(cplns, key=sorter)]
 
     # Handlers follow
 
@@ -511,11 +548,14 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         else:
             redo_command = previous_command = before_previous_command = None
 
-        # print('on_modified', "'%s'" % current_char, redo_command, previous_command, before_previous_command)
+        # print('on_modified', "%r\n\tcommand_history: %r\n\tredo_command: %r\n\tprevious_command: %r\n\tbefore_previous_command: %r" % (current_char, bool(command_history), redo_command, previous_command, before_previous_command))
         if not command_history or redo_command[1] is None and (
             previous_command[0] == 'paste' or
             previous_command[0] == 'insert' and previous_command[1]['characters'][-1] not in ('\n', '\t') or
-            previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] == '($0)' or
+            previous_command[0] == 'insert_snippet' and previous_command[1]['contents'] in (
+                '(${0:$SELECTION})', '[${0:$SELECTION}]', '{${0:$SELECTION}}', '`${0:$SELECTION}`', '"${0:$SELECTION}"', "'${0:$SELECTION}'",
+                '($0)', '[$0]', '{$0}', '`$0`', '"$0"', "'$0'",
+            ) or
             before_previous_command[0] in ('insert', 'paste') and (
                 previous_command[0] == 'commit_completion' or
                 previous_command[0] == 'insert_completion' or
