@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.12"
+VERSION = "3.0.0-beta.13"
 
 
 import os
@@ -276,10 +276,9 @@ class CodeIntelHandler(object):
 
         if language == 'PHP' and type != 'object-members':
             def get_name(c):
+                name = c[1]
                 if c[0] == 'variable':
-                    name = "$" + c[1]
-                else:
-                    name = c[1]
+                    name = "$" + name
                 name = name.replace("$", "\\$")
                 if c[0] == function:
                     name += "($0)"
@@ -291,6 +290,8 @@ class CodeIntelHandler(object):
                 name = name.replace("$", "\\$")
                 if c[0] == 'attribute':
                     name += "={ $0 }"
+                elif c[0] == function:
+                    name += "($0)"
                 return name
 
         def sorter(c):
