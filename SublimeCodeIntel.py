@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2015
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.13"
+VERSION = "3.0.0-beta.14"
 
 
 import os
@@ -289,7 +289,7 @@ class CodeIntelHandler(object):
                 name = c[1]
                 name = name.replace("$", "\\$")
                 if c[0] == 'attribute':
-                    name += "={ $0 }"
+                    name += "=$0 "
                 elif c[0] == function:
                     name += "($0)"
                 return name
@@ -565,11 +565,14 @@ class SublimeCodeIntel(CodeIntelHandler, sublime_plugin.EventListener):
         ):
             buf = self.buf_from_view(view)
             if buf:
-                is_stop_char = current_char in buf.cpln_stop_chars
+                if view.is_auto_complete_visible():
+                    # Fillup characters commit autocomplete
+                    if current_char in buf.cpln_fillup_chars:
+                        view.run_command('commit_completion')
 
-                # Stop characters hide autocomplete window
-                if is_stop_char:
-                    view.run_command('hide_auto_complete')
+                    # Stop characters hide autocomplete window
+                    if current_char in buf.cpln_stop_chars:
+                        view.run_command('hide_auto_complete')
 
                 buf.scan_document(self, True)
                 buf.trg_from_pos(self, True)
