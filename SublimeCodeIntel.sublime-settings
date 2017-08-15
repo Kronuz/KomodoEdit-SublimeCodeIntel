@@ -4,7 +4,7 @@
 {
     "default": {
         /*
-            live - Enbles/disables debug mode.
+            debug - Enbles/disables debug mode.
         */
         "debug": false,
 
@@ -154,6 +154,8 @@
             },
             "Node.js": {
                 "nodejsDefaultInterpreter": ""
+            },
+            "ECMAScript": {
             },
             "PHP": {
                 "php": "",
