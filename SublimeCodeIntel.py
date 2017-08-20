@@ -245,7 +245,7 @@ class Settings:
         for setting in ('@disable', 'command', 'oop_mode', 'log_levels'):
             if (
                 setting in self.changeset or
-                self.previous_settings.get(setting, False) != self.settings.get(setting, False)
+                self.previous_settings and self.previous_settings.get(setting) != self.settings.get(setting)
             ):
                 self.changeset.discard(setting)
                 need_deactivate = True
@@ -294,6 +294,8 @@ class Settings:
 
         if self.previous_settings and self.on_update_callback:
             self.on_update_callback(self)
+
+        self.copy()
 
     def save(self, view=None):
         """
