@@ -23,12 +23,12 @@
 """
 CodeIntel is a plugin intended to display "code intelligence" information.
 The plugin is based in code from the Open Komodo Editor and has a MPL license.
-Port by German M. Bravo (Kronuz). 2011-2015
+Port by German M. Bravo (Kronuz). 2011-2017
 
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.20"
+VERSION = "3.0.0-beta.21"
 
 
 import os
@@ -885,7 +885,6 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
             buf = self.buf_from_view(view)
             # print('on_modified.triggering', bool(buf))
             if buf:
-                buf.scan_document(self, True)
                 buf.trg_from_pos(self, True)
 
     def on_selection_modified(self, view):
@@ -914,7 +913,6 @@ class CodeintelAutoComplete(CodeintelHandler, sublime_plugin.TextCommand):
         buf = self.buf_from_view(view)
 
         if buf:
-            buf.scan_document(self, True)
             buf.trg_from_pos(self, True)
 
 
@@ -925,7 +923,6 @@ class GotoPythonDefinition(CodeintelHandler, sublime_plugin.TextCommand):
         buf = self.buf_from_view(view)
 
         if buf:
-            buf.scan_document(self, True)
             buf.defn_trg_from_pos(self)
 
 
