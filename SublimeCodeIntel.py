@@ -28,7 +28,7 @@ Port by German M. Bravo (Kronuz). 2011-2017
 """
 from __future__ import absolute_import, unicode_literals, print_function
 
-VERSION = "3.0.0-beta.21"
+VERSION = "3.0.0-beta.22"
 
 
 import os
@@ -968,7 +968,7 @@ class CodeintelCompleteCommitCommand(CodeintelHandler, sublime_plugin.TextComman
 
 if 'plugin_is_loaded' not in globals():
     settings = Settings()
-    ci = CodeIntel()
+    ci = CodeIntel(lambda fn: sublime.set_timeout(fn, 0))
 
     # Set to true when the plugin is loaded at startup
     plugin_is_loaded = False
