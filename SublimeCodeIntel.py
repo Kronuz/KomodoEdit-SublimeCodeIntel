@@ -933,7 +933,7 @@ class SublimeCodeIntel(CodeintelHandler, sublime_plugin.EventListener):
                 return value == operand
 
 
-class CodeintelAutoComplete(CodeintelHandler, sublime_plugin.TextCommand):
+class CodeintelAutoCompleteCommand(CodeintelHandler, sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         view = self.view
 
@@ -943,7 +943,7 @@ class CodeintelAutoComplete(CodeintelHandler, sublime_plugin.TextCommand):
             buf.trg_from_pos(self, True)
 
 
-class GotoPythonDefinition(CodeintelHandler, sublime_plugin.TextCommand):
+class CodeintelGoToDefinitionCommand(CodeintelHandler, sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         view = self.view
 
@@ -953,7 +953,7 @@ class GotoPythonDefinition(CodeintelHandler, sublime_plugin.TextCommand):
             buf.defn_trg_from_pos(self)
 
 
-class BackToPythonDefinition(sublime_plugin.TextCommand):
+class CodeintelBackFromDefinitionCommand(sublime_plugin.TextCommand):
     def run(self, edit, block=False):
         window = sublime.active_window()
         wid = window.id()
