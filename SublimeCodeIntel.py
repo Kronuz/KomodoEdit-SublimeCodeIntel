@@ -32,6 +32,13 @@ NAME = "SublimeCodeIntel"
 VERSION = "3.0.0-beta.37"
 
 import os
+import sys
+__file__ = os.path.normpath(os.path.abspath(__file__))
+__path__ = os.path.dirname(__file__)
+python_sitelib_path = os.path.join(os.path.normpath(__path__), 'libs')
+if python_sitelib_path not in sys.path:
+    sys.path.insert(0, python_sitelib_path)
+
 import re
 import logging
 import textwrap
@@ -41,7 +48,7 @@ from collections import deque
 import sublime
 import sublime_plugin
 
-from .libs.codeintel import CodeIntel, CodeIntelBuffer, logger as codeintel_logger, logger_level as codeintel_logger_level
+from codeintel import CodeIntel, CodeIntelBuffer, logger as codeintel_logger, logger_level as codeintel_logger_level
 from .settings import Settings, SettingTogglerCommandMixin
 
 logger_name = 'CodeIntel'
