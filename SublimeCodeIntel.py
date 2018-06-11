@@ -794,12 +794,14 @@ class CodeintelSettings(Settings):
         return prefs
 
 
-if 'settings' not in globals():
-    settings = CodeintelSettings(NAME)
+settings = CodeintelSettings(NAME)
 
-    class CodeintelToggleSettingCommand(SettingTogglerCommandMixin, sublime_plugin.WindowCommand):
-        settings = settings
 
+class CodeintelToggleSettingCommand(SettingTogglerCommandMixin, sublime_plugin.WindowCommand):
+    settings = settings
+
+
+if 'ci' not in globals():
     ci = CodeIntel(lambda fn: sublime.set_timeout(fn, 0))
 
 
