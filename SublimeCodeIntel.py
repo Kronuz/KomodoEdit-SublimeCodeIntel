@@ -770,28 +770,28 @@ class CodeintelSettings(Settings):
             scan_exclude_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_exclude_paths]
 
         language_settings = self.settings.get('language_settings', {})
-        for l, s in language_settings.items():
-            if lang is not None and l != lang:
+        for language, language_settings in language_settings.items():
+            if lang is not None and language != lang:
                 continue
 
-            if l in disabled_languages or s.get('@disable'):
+            if language in disabled_languages or language_settings.get('@disable'):
                 continue
 
-            for k, v in s.items():
+            for k, v in language_settings.items():
                 if k not in self.settings:
                     prefs[k] = v
 
-            extra_paths_name = EXTRA_PATHS_MAP.get(l)
-            language_scan_extra_paths = s.get('scan_extra_paths', []) + s.get(extra_paths_name, [])
+            extra_paths_name = EXTRA_PATHS_MAP.get(language)
+            language_scan_extra_paths = language_settings.get('scan_extra_paths', []) + language_settings.get(extra_paths_name, [])
             if language_scan_extra_paths:
                 language_scan_extra_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in language_scan_extra_paths]
-            if l == 'Python':
+            if language in ('Python', 'Python3'):
                 language_scan_extra_paths.append(os.path.normcase(os.path.normpath(os.path.dirname(sublime.__file__))))
             if extra_paths_name:
                 prefs[extra_paths_name] = os.pathsep.join(unique(scan_extra_paths + language_scan_extra_paths))
 
-            exclude_paths_name = EXCLUDE_PATHS_MAP.get(l)
-            language_scan_exclude_paths = s.get('scan_exclude_paths', []) + s.get(exclude_paths_name, [])
+            exclude_paths_name = EXCLUDE_PATHS_MAP.get(language)
+            language_scan_exclude_paths = language_settings.get('scan_exclude_paths', []) + language_settings.get(exclude_paths_name, [])
             if language_scan_exclude_paths:
                 language_scan_exclude_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in language_scan_exclude_paths]
             if exclude_paths_name:
