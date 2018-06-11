@@ -779,6 +779,8 @@ class CodeintelSettings(Settings):
             language_scan_extra_paths = set(s.get('scan_extra_paths', [])) | set(s.get(extra_paths_name, []))
             if language_scan_extra_paths:
                 language_scan_extra_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_extra_paths | language_scan_extra_paths]
+            if l == 'Python':
+                language_scan_extra_paths.add(os.path.normcase(os.path.normpath(os.path.dirname(sublime.__file__))))
             if extra_paths_name:
                 prefs[extra_paths_name] = os.pathsep.join(language_scan_extra_paths)
 
