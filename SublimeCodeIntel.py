@@ -137,7 +137,7 @@ class CodeintelHandler(object):
         if isinstance(msg, tuple):
             try:
                 msg = msg[0] % msg[1:]
-            except:
+            except Exception:
                 msg = repr(msg)
         msg = msg.strip()
 
@@ -278,13 +278,6 @@ class CodeintelHandler(object):
         def get_desc(c):
             return c[2] if len(c) > 2 else c[1]
 
-        def get_name(c):
-            name = c[1]
-            name = name.replace("$", "\\$")
-            if c[0] == function:
-                name += "($0)"
-            return name
-
         def get_type(c):
             return c[0].title()
 
@@ -298,13 +291,21 @@ class CodeintelHandler(object):
                     name += "($0)"
                 return name
 
-        if lang == 'ECMAScript':
+        elif lang == 'ECMAScript':
             def get_name(c):
                 name = c[1]
                 name = name.replace("$", "\\$")
                 if c[0] == 'attribute':
                     name += "=$0 "
                 elif c[0] == function:
+                    name += "($0)"
+                return name
+
+        else:
+            def get_name(c):
+                name = c[1]
+                name = name.replace("$", "\\$")
+                if c[0] == function:
                     name += "($0)"
                 return name
 
