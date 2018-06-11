@@ -78,6 +78,11 @@ EXCLUDE_PATHS_MAP = {
 }
 
 
+def unique(lst):
+    used = set()
+    return [x for x in lst if x not in used and (used.add(x) or True)]
+
+
 class CodeintelHandler(object):
     HISTORY_SIZE = 64
     MAX_FILESIZE = 1 * 1024 * 1024   # 1MB
@@ -753,15 +758,15 @@ class CodeintelSettings(Settings):
             'codeintel_selected_catalogs': self.settings.get('selected_catalogs'),
         }
 
-        disabled_languages = set(self.settings.get('disabled_languages', []))
+        disabled_languages = self.settings.get('disabled_languages', [])
 
-        scan_extra_paths = set(self.settings.get('scan_extra_paths', []))
+        scan_extra_paths = self.settings.get('scan_extra_paths', [])
         if scan_extra_paths:
-            scan_extra_paths = set(os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_extra_paths)
+            scan_extra_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_extra_paths]
 
-        scan_exclude_paths = set(self.settings.get('scan_exclude_paths', []))
+        scan_exclude_paths = self.settings.get('scan_exclude_paths', [])
         if scan_exclude_paths:
-            scan_exclude_paths = set(os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_exclude_paths)
+            scan_exclude_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_exclude_paths]
 
         language_settings = self.settings.get('language_settings', {})
         for l, s in language_settings.items():
@@ -776,20 +781,20 @@ class CodeintelSettings(Settings):
                     prefs[k] = v
 
             extra_paths_name = EXTRA_PATHS_MAP.get(l)
-            language_scan_extra_paths = set(s.get('scan_extra_paths', [])) | set(s.get(extra_paths_name, []))
+            language_scan_extra_paths = s.get('scan_extra_paths', []) + s.get(extra_paths_name, [])
             if language_scan_extra_paths:
-                language_scan_extra_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_extra_paths | language_scan_extra_paths]
+                language_scan_extra_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in language_scan_extra_paths]
             if l == 'Python':
-                language_scan_extra_paths.add(os.path.normcase(os.path.normpath(os.path.dirname(sublime.__file__))))
+                language_scan_extra_paths.append(os.path.normcase(os.path.normpath(os.path.dirname(sublime.__file__))))
             if extra_paths_name:
-                prefs[extra_paths_name] = os.pathsep.join(language_scan_extra_paths)
+                prefs[extra_paths_name] = os.pathsep.join(unique(scan_extra_paths + language_scan_extra_paths))
 
             exclude_paths_name = EXCLUDE_PATHS_MAP.get(l)
-            language_scan_exclude_paths = set(s.get('scan_exclude_paths', [])) | set(s.get(exclude_paths_name, []))
+            language_scan_exclude_paths = s.get('scan_exclude_paths', []) + s.get(exclude_paths_name, [])
             if language_scan_exclude_paths:
-                language_scan_exclude_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in scan_exclude_paths | language_scan_exclude_paths]
+                language_scan_exclude_paths = [os.path.normcase(os.path.normpath(os.path.expanduser(e))).rstrip(os.sep) for e in language_scan_exclude_paths]
             if exclude_paths_name:
-                prefs[exclude_paths_name] = os.pathsep.join(language_scan_exclude_paths)
+                prefs[exclude_paths_name] = os.pathsep.join(unique(scan_exclude_paths + language_scan_exclude_paths))
 
         return prefs
 
